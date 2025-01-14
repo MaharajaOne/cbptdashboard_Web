@@ -13,7 +13,7 @@ const Navbar = ({ empName, onLogout }) => (
           style={{
             color: '#007bff',
             borderRadius: '5px',
-          }}
+          }} 
         >
           Logout
         </button>

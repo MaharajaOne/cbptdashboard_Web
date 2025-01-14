@@ -66,7 +66,7 @@ app.get('/sidebar', authenticate, (req, res) => {
   const { role } = req.user;
 
   const sidebar = {
-    admin: ['Home', 'Time Sheet', 'Products', 'Customers'],
+    admin: ['Home', 'Time Sheet', 'Monthly Report', 'Products', 'Customers'],
     user: ['Home', 'Time Sheet'],
   };
 
@@ -80,11 +80,11 @@ app.listen(5000, () => console.log('Server running on port 5000'));
 app.get('/employee-details', authenticate, async (req, res) => {
   try {
     const { emp_id } = req.user;
-    const result = await pool.query('SELECT emp_name, role FROM employee WHERE emp_id = $1', [emp_id]);
+    const result = await pool.query('SELECT emp_id, emp_name, role FROM employee WHERE emp_id = $1', [emp_id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Employee not found' });
     }
-    res.json({ name: result.rows[0].emp_name, role: result.rows[0].role });
+    res.json({ name: result.rows[0].emp_name, role: result.rows[0].role, emp_id: result.rows[0].emp_id });
   } catch (err) {
     console.error('Error fetching employee details:', err);
     res.status(500).json({ message: 'Failed to fetch employee details', error: err });
@@ -92,38 +92,95 @@ app.get('/employee-details', authenticate, async (req, res) => {
 });
 
 
-app.get('/publishers', async (req, res) => {
+// Endpoint to fetch filtered monthly data
+app.get('/data', async (req, res) => {
+  const { client, month, stage } = req.query;
+
+  let query = `
+      SELECT 
+          Client, 
+          CASE 
+              WHEN Stage IN ('FP', '01_FPP', 'FPP') THEN '01_FPP'
+              WHEN Stage IN ('Finals', '12_Final', '01_Finals') THEN '03_Finals'
+              WHEN Stage IN ('Revises', '03_Revises I', 'Rev I', 'Revises 1', 'Revises I') THEN '02_Revises-1'
+              WHEN Stage IN ('DB', 'Sample', 'Refinals', 'CP', 'Revises 2', 'Epub correx', 'Revises 3', 
+                             'FP PM correx', 'Revises 4', 'Index', 'Recastoff', 'Revises 5', 
+                             'Revises 6', 'Revises 7', 'Revises 8', 'Revises 9', '11_Vouchers', 
+                             '04_Revises II', '06_Index', '02_FP_PM_Corrections', '09_Scatters I', 
+                             '07_Tables', '25_Revised Index', '11_Rev Vouchers', '08_PM_Corrections', 
+                             '13_Re-finals', '05_Revises III', '16_Other', '06_Revises IV', 
+                             'Voucher Correcs', 'Index Correcs', 'Rev Correcs', 'FP_PM correcs', 
+                             'Rev II', 'Vouchers', 'Appendix', 'Reprint', '03_Re-Finals', 
+                             '02_Final correcs', '15_WEBPDF', '00_FM & RWS', '26_Rev. WebPDF') 
+              THEN '04_Other Deliveries'
+              ELSE '04_Other Deliveries'
+          END AS normalized_stage,
+          COUNT(DISTINCT Ititle) AS title_count,
+          SUM(CASE WHEN Pages ~ '^[0-9]+$' THEN CAST(Pages AS NUMERIC) ELSE 0 END) AS sum_pages, 
+          SUM(CASE WHEN Corrections ~ '^[0-9]+$' THEN CAST(Corrections AS NUMERIC) ELSE 0 END) AS sum_corrections,
+           TO_CHAR(delivered_date, 'YYYY-MM') AS month_sort,
+          TO_CHAR(delivered_date, 'MON') AS month
+      FROM MonthlyReport
+      WHERE 1 = 1
+  `;
+
+  const params = [];
+
+  if (client) {
+      query += ` AND Client = $${params.length + 1}`;
+      params.push(client);
+  }
+
+  if (month) {
+       query += ` AND TO_CHAR(delivered_date, 'MON') = $${params.length + 1}`;
+       params.push(month);
+  }
+
+  if (stage) {
+      query += ` AND CASE 
+                    WHEN Stage IN ('FP', '01_FPP', 'FPP') THEN '01_FPP'
+                    WHEN Stage IN ('Finals', '12_Final', '01_Finals') THEN '03_Finals'
+                    WHEN Stage IN ('Revises', '03_Revises I', 'Rev I', 'Revises 1', 'Revises I') THEN '02_Revises-1'
+                    ELSE '04_Other Deliveries'
+                END = $${params.length + 1}`;
+      params.push(stage);
+  }
+
+  query += ` GROUP BY Client, normalized_stage, month_sort, month ORDER BY month_sort`;
+
   try {
-    const result = await pool.query('SELECT publisher_id, publisher_name FROM publisher');
-    res.json(result.rows);  // Send the fetched rows as the response
-    // console.log(response.data);
-  } catch (err) {
-    console.error('Error fetching publishers:', err);
-    res.status(500).json({ message: 'Server error' });
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+  } catch (error) {
+      console.error('Database query error:', error);
+      res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 });
-app.get('/tasks', async (req, res) => {
-  const result = await pool.query('SELECT task_id, task_name FROM task');
-  res.json(result.rows);
-});
+app.get('/filters', async (req, res) => {
+  try {
+      const query = `
+          SELECT DISTINCT Client, 
+                          TO_CHAR(delivered_date, 'MON') AS month,
+                          CASE 
+                              WHEN Stage IN ('FP', '01_FPP', 'FPP') THEN '01_FPP'
+                              WHEN Stage IN ('Finals', '12_Final', '01_Finals') THEN '03_Finals'
+                              WHEN Stage IN ('Revises', '03_Revises I', 'Rev I', 'Revises 1', 'Revises I') THEN '02_Revises-1'
+                              ELSE '04_Other Deliveries'
+                          END AS normalized_stage
+          FROM MonthlyReport;
+      `;
 
-app.get('/stages', async (req, res) => {
-  const result = await pool.query('SELECT stage_id, stage_name FROM stage');
-  res.json(result.rows);
-});
+      const result = await pool.query(query);
 
-app.get('/functions', async (req, res) => {
-  const result = await pool.query('SELECT function_id, function_name FROM function');
-  res.json(result.rows);
-});
+      const filters = {
+          clients: [...new Set(result.rows.map(row => row.client))],
+          months: [...new Set(result.rows.map(row => row.month))],
+          stages: [...new Set(result.rows.map(row => row.normalized_stage))],
+      };
 
-// API for saving time log
-app.post('/track-time', async (req, res) => {
-  const { emp_id, publisher_id, task_id, stage_id, function_id, start_time, end_time, duration } = req.body;
-  const result = await pool.query(
-      `INSERT INTO time_log (emp_id, publisher_id, task_id, stage_id, function_id, start_time, end_time, duration) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [emp_id, publisher_id, task_id, stage_id, function_id, start_time, end_time, duration]
-  );
-  res.json(result.rows[0]);
+      res.json(filters);
+  } catch (error) {
+      console.error('Error fetching filters:', error);
+      res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  }
 });
