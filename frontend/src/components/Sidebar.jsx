@@ -57,6 +57,13 @@ const Sidebar = ({ sidebarItems }) => {
                                   Delivery
                                 </Nav.Link>
                               </Nav.Item>
+
+                              <Nav.Item>
+                                <Nav.Link as={Link} to="/monthlyreport/ontime" className="text-dark pl-3 ms-4" >
+                                  Ontime
+                                </Nav.Link>
+                              </Nav.Item>
+
                               <Nav.Item>
                                 <Nav.Link as={Link} to="/monthlyreport/quality" className="text-dark pl-3 ms-4">
                                   Quality

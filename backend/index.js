@@ -184,3 +184,151 @@ app.get('/filters', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 });
+app.get('/ontime-data', async (req, res) => {
+  const { client, month, stage } = req.query;
+
+    let query = `
+        SELECT
+            Client,
+            CASE
+                WHEN Stage IN ('FP', '01_FPP', 'FPP') THEN '01_FPP'
+                WHEN Stage IN ('Finals', '12_Final', '01_Finals') THEN '03_Finals'
+                WHEN Stage IN ('Revises', '03_Revises I', 'Rev I', 'Revises 1', 'Revises I') THEN '02_Revises-1'
+                WHEN Stage IN ('DB', 'Sample', 'Refinals', 'CP', 'Revises 2', 'Epub correx', 'Revises 3',
+                                'FP PM correx', 'Revises 4', 'Index', 'Recastoff', 'Revises 5',
+                                'Revises 6', 'Revises 7', 'Revises 8', 'Revises 9', '11_Vouchers',
+                                '04_Revises II', '06_Index', '02_FP_PM_Corrections', '09_Scatters I',
+                                '07_Tables', '25_Revised Index', '11_Rev Vouchers', '08_PM_Corrections',
+                                '13_Re-finals', '05_Revises III', '16_Other', '06_Revises IV',
+                                'Voucher Correcs', 'Index Correcs', 'Rev Correcs', 'FP_PM correcs',
+                                'Rev II', 'Vouchers', 'Appendix', 'Reprint', '03_Re-Finals',
+                                '02_Final correcs', '15_WEBPDF', '00_FM & RWS', '26_Rev. WebPDF')
+                THEN '04_Other Deliveries'
+                ELSE '04_Other Deliveries'
+            END AS normalized_stage,
+            TO_CHAR(delivered_date, 'YYYY-MM') AS month_sort,
+            TO_CHAR(delivered_date, 'MON') AS month,
+           delivered_date,
+            actual_date,
+           proposed_date,
+            Ititle
+        FROM MonthlyReport
+        WHERE 1 = 1
+    `;
+
+
+  const params = [];
+
+  if (client) {
+    query += ` AND Client = $${params.length + 1}`;
+    params.push(client);
+  }
+
+  if (month) {
+    query += ` AND TO_CHAR(delivered_date, 'MON') = $${params.length + 1}`;
+    params.push(month);
+  }
+
+  if (stage) {
+      query += ` AND CASE
+                    WHEN Stage IN ('FP', '01_FPP', 'FPP') THEN '01_FPP'
+                    WHEN Stage IN ('Finals', '12_Final', '01_Finals') THEN '03_Finals'
+                    WHEN Stage IN ('Revises', '03_Revises I', 'Rev I', 'Revises 1', 'Revises I') THEN '02_Revises-1'
+                    ELSE '04_Other Deliveries'
+                END = $${params.length + 1}`;
+      params.push(stage);
+  }
+
+  query += ` ORDER BY month_sort`;
+
+  try {
+    const result = await pool.query(query, params);
+
+    const processedRows = result.rows.map(row => {
+        const deliveredDate = new Date(row.delivered_date);
+        const actualDate = new Date(row.actual_date);
+        const proposedDate = new Date(row.proposed_date);
+
+        let status;
+
+        if (deliveredDate <= actualDate) {
+            status = "Instances that met original date";
+        } else if (deliveredDate <= proposedDate) {
+            status = "met revised date";
+        }else {
+            status = "delivered late";
+        }
+          return {
+              ...row,
+              status,
+          };
+
+    });
+
+     const groupedData = processedRows.reduce((acc, row) => {
+          const key = `${row.Client}-${row.normalized_stage}-${row.month_sort}-${row.month}`;
+
+           if (!acc[key]) {
+               acc[key] = {
+                   Client: row.Client,
+                   normalized_stage: row.normalized_stage,
+                   month_sort: row.month_sort,
+                   month: row.month,
+                   late_titles: 0,
+                   met_revised_titles: 0,
+                   met_original_titles:0
+               };
+           }
+
+            if(row.status ==="Instances that met original date"){
+                acc[key].met_original_titles++;
+            } else if (row.status === "met revised date") {
+                acc[key].met_revised_titles++;
+            }
+            else{
+                acc[key].late_titles++;
+            }
+
+
+        return acc;
+     }, {});
+
+     const finalResult = Object.values(groupedData);
+
+    res.json(finalResult);
+
+  } catch (error) {
+    console.error('Database query error:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  }
+});
+
+
+app.get('/ontime-data-filters', async (req, res) => {
+    try {
+        const query = `
+            SELECT DISTINCT Client,
+                            TO_CHAR(delivered_date, 'MON') AS month,
+                            CASE
+                                WHEN Stage IN ('FP', '01_FPP', 'FPP') THEN '01_FPP'
+                                WHEN Stage IN ('Finals', '12_Final', '01_Finals') THEN '03_Finals'
+                                WHEN Stage IN ('Revises', '03_Revises I', 'Rev I', 'Revises 1', 'Revises I') THEN '02_Revises-1'
+                                ELSE '04_Other Deliveries'
+                            END AS normalized_stage
+            FROM MonthlyReport;
+        `;
+
+        const result = await pool.query(query);
+
+        const filters = {
+            clients: [...new Set(result.rows.map(row => row.client))],
+            months: [...new Set(result.rows.map(row => row.month))],
+            stages: [...new Set(result.rows.map(row => row.normalized_stage))],
+        };
+
+        res.json(filters);
+    } catch (error) {
+        console.error('Error fetching filters:', error);
+        res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    }
+});

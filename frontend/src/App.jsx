@@ -7,6 +7,7 @@ import Login from './components/Login';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import TimeSheet from './Pages/TimeSheet';
 import Delivery from './Pages/Delivery';
+import Ontime from './Pages/Ontime';
 import Productivity from './Pages/Productivity'; 
 import Quality from './Pages/Quality'; // Import Quality component
 
@@ -78,6 +79,7 @@ const App = () => {
             <Route path="/home" element={<h1>Home</h1>} />
             <Route path="/timesheet" element={<TimeSheet empDetails={empDetails} />} />
             <Route path="/monthlyreport/delivery" element={<Delivery />} />
+            <Route path="/monthlyreport/ontime" element={<Ontime />} />
             <Route path="/monthlyreport/quality" element={<Quality />} />
             <Route path="/monthlyreport/productivity" element={<Productivity />} />
             <Route path="/products" element={<h1>Products</h1>} />

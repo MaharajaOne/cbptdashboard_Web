@@ -14,7 +14,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Delivery = () => {
   const [clients, setClients] = useState([]);
-  const [selectedClient, setSelectedClient] = useState('');
+   const [selectedClient, setSelectedClient] = useState(() => {
+        return localStorage.getItem('selectedClient') || '';
+    });
   const [chartsData, setChartsData] = useState({
     FPP: [],
     Finals: [],
@@ -22,10 +24,19 @@ const Delivery = () => {
     OtherDeliveries: [],
   });
 
-  useEffect(() => {
-    fetchClients();
-    fetchChartData();
-  }, []);
+    useEffect(() => {
+        fetchClients();
+        // Load data only if there's a selected client in local storage
+        if (selectedClient) {
+          fetchChartData(selectedClient);
+        } else {
+            fetchChartData(); // If no client stored load the all client data
+        }
+    }, [selectedClient]);
+
+    useEffect(() => {
+      localStorage.setItem('selectedClient', selectedClient);
+    }, [selectedClient]);
 
   const fetchClients = async () => {
     try {
@@ -60,9 +71,8 @@ const Delivery = () => {
     }
   };
 
-  const handleClientClick = (client) => {
-    setSelectedClient(client);
-    fetchChartData(client);
+    const handleClientClick = (client) => {
+         setSelectedClient(client);
   };
 
 
