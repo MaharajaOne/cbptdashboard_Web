@@ -12,7 +12,7 @@ import {
 import { LabelList } from 'recharts';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const Ontime = () => {
+const ClientOntime = () => {
     const [clients, setClients] = useState([]);
     const [selectedClient, setSelectedClient] = useState(() => {
         return localStorage.getItem('selectedClient') || '';
@@ -42,7 +42,7 @@ const Ontime = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/ontime-data-filters');
+      const response = await axios.get('http://localhost:5000/client-ontime-data-filters');
       setClients(response.data.clients);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -51,18 +51,18 @@ const Ontime = () => {
 
     const fetchChartData = async (client = '') => {
       try {
-        const fppResponse = await axios.get('http://localhost:5000/ontime-data', {
+        const fppResponse = await axios.get('http://localhost:5000/client-ontime-data', {
             params: { client, stage: '01_FPP' },
         });
-        const finalsResponse = await axios.get('http://localhost:5000/ontime-data', {
+        const finalsResponse = await axios.get('http://localhost:5000/client-ontime-data', {
             params: { client, stage: '03_Finals' },
         });
 
-        const revisesResponse = await axios.get('http://localhost:5000/ontime-data', {
+        const revisesResponse = await axios.get('http://localhost:5000/client-ontime-data', {
             params: { client, stage: '02_Revises-1' },
         });
 
-        const otherDeliveriesResponse = await axios.get('http://localhost:5000/ontime-data', {
+        const otherDeliveriesResponse = await axios.get('http://localhost:5000/client-ontime-data', {
             params: { client, stage: '04_Other Deliveries' },
         });
 
@@ -138,7 +138,7 @@ const Ontime = () => {
 
   return (
     <div className="container mt-1">
-      <h2 className="text-center mb-2">Monthly Report</h2>
+      <h2 className="text-center mb-2">Clientwise Ontime Report</h2>
       <div className="row mb-4">
         <div className="col-md-12">
           <div className="d-flex flex-wrap">
@@ -193,4 +193,4 @@ const Ontime = () => {
   );
 };
 
-export default Ontime;
+export default ClientOntime;
