@@ -29,7 +29,7 @@ const MonthDelivery = () => {
         if (selectedMonth) {
             fetchChartData(selectedMonth);
         } else {
-             fetchChartData();
+            fetchChartData();
         }
     }, [selectedMonth]);
 
@@ -40,7 +40,7 @@ const MonthDelivery = () => {
     const fetchMonths = async () => {
         try {
             const response = await axios.get('http://localhost:5000/month-delivery-data-filters');
-           
+
             setMonths(response.data.months);
         } catch (error) {
             console.error('Error fetching months:', error);
@@ -75,60 +75,163 @@ const MonthDelivery = () => {
         setSelectedMonth(month);
     };
 
+    const hexToRgba = (hex, opacity) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${opacity})` : null;
+    };
 
- const renderChart = (data, title, dataKey1, name1, dataKey2, name2, yAxisLabel1, yAxisLabel2) => {
-    if (!data || data.length === 0) {
-      return <div className="col-md-12 mb-3 border bg-light p-3">No data available for {title}</div>;
-    }
+    const renderChartWithTable = (
+        data,
+        title,
+        dataKey1,
+        name1,
+        dataKey2,
+        name2,
+        yAxisLabel1,
+        yAxisLabel2
+    ) => {
+        if (!data || data.length === 0) {
+            return (
+                <div className="col-12 mb-3 border bg-light p-3">
+                    No data available for {title}
+                </div>
+            );
+        }
 
-    // Sort the data array in descending order based on dataKey1
-    const sortedData = [...data].sort((a, b) => b[dataKey1] - a[dataKey1]);
+        const sortedData = [...data].sort((a, b) => b[dataKey1] - a[dataKey1]);
 
-    const maxValue1 = Math.max(...sortedData.map((item) => Number(item[dataKey1])), 0);
-    const yAxisMax1 = Math.ceil(maxValue1 * 1.2);
+        const maxValue1 = Math.max(...sortedData.map((item) => Number(item[dataKey1])), 0);
+        const yAxisMax1 = Math.ceil(maxValue1 * 1.2);
 
-    const maxValue2 = Math.max(...sortedData.map((item) => Number(item[dataKey2])), 0);
-    const yAxisMax2 = Math.ceil(maxValue2 * 1.2);
+        const maxValue2 = Math.max(...sortedData.map((item) => Number(item[dataKey2])), 0);
+        const yAxisMax2 = Math.ceil(maxValue2 * 1.2);
 
 
-    return (
-      <div className="col-md-12 mb-3 border p-3  bg-light">
-        <h5 className="text-center">{title}</h5>
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart
-            data={sortedData}
-            margin={{ top: 50, right: 30, left: 20, bottom: 40 }}
-          >
-            <XAxis
-              dataKey="client"
-              label={{ value: 'Client', position: 'insideBottom', offset: -40 }}
-              angle={0}
-              textAnchor="end"
-            />
-            <YAxis
-              yAxisId="left"
-              label={{ value: yAxisLabel1, angle: -90, position: 'insideLeft', offset: -5 }}
-              domain={[0, yAxisMax1]}
-            />
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              label={{ value: yAxisLabel2, angle: 90, position: 'insideRight', offset: -5 }}
-              domain={[0, yAxisMax2]}
-            />
-            <Tooltip />
-            <Legend />
-            <Bar yAxisId="left" dataKey={dataKey1} fill="#8884d8" name={name1} >
-              <LabelList dataKey={dataKey1} position="top" />
-            </Bar>
-            <Bar yAxisId="right" dataKey={dataKey2} fill="#82ca9d" name={name2}>
-              <LabelList dataKey={dataKey2} position="top" />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  };
+        const barColor1 = "#8884d8";
+        const barColor2 = "#82ca9d";
+
+         const tableStyle = {
+            width: '100%',
+            borderCollapse: 'collapse',
+            marginTop: '10px',
+        };
+        const thStyle = {
+            border: '1px solid #ddd',
+            padding: '8px',
+            textAlign: 'center',
+        };
+         const tdStyle = {
+            border: '1px solid #ddd',
+             padding: '8px',
+             textAlign: 'center',
+        };
+
+
+        return (
+            <div className="row mb-4">
+                {/* Chart Section */}
+                 <div className="col-8 border p-3 bg-light">
+                    <h5 className="text-center">{title}</h5>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <BarChart
+                            data={sortedData}
+                            margin={{ top: 50, right: 30, left: 20, bottom: 20 }}
+                        >
+                           <Legend
+                                width="auto"
+                                wrapperStyle={{
+                                 top: -5,
+                                 right: 10,
+                                 backgroundColor: '#f5f5f5',
+                                 border: '1px solid #d5d5d5',
+                                 borderRadius: 3,
+                                 lineHeight: '40px',
+                                }}
+                            />
+                            <XAxis
+                                dataKey="client"
+                                label={{
+                                    value: 'Client',
+                                    position: 'insideBottom',
+                                    offset: -40,
+                                }}
+                                angle={-45}
+                                textAnchor="end"
+                            />
+                            <YAxis
+                                yAxisId="left"
+                                label={{
+                                    value: yAxisLabel1,
+                                    angle: -90,
+                                    position: 'insideLeft',
+                                    offset: -5,
+                                }}
+                                domain={[0, yAxisMax1]}
+                            />
+                            <YAxis
+                                yAxisId="right"
+                                orientation="right"
+                                label={{
+                                    value: yAxisLabel2,
+                                    angle: 90,
+                                    position: 'insideRight',
+                                    offset: -5,
+                                }}
+                                domain={[0, yAxisMax2]}
+                            />
+                            <Tooltip />
+
+                            <Bar
+                                yAxisId="left"
+                                dataKey={dataKey1}
+                                fill={barColor1}
+                                name={name1}
+                            >
+                                <LabelList dataKey={dataKey1} position="top" angle={-90} offset={15} />
+                            </Bar>
+                            {dataKey2 && (
+                                <Bar
+                                    yAxisId="right"
+                                    dataKey={dataKey2}
+                                    fill={barColor2}
+                                    name={name2}
+                                >
+                                    <LabelList dataKey={dataKey2} position="top" angle={-90} offset={30} />
+                                </Bar>
+                            )}
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Table Section */}
+                 <div className="col-4 border p-3 bg-light">
+                    <h6 className="text-center">Data Table</h6>
+                      <table style={tableStyle}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Client</th>
+                                <th style={thStyle}>{name1}</th>
+                                {dataKey2 && <th style={thStyle}>{name2}</th>}
+                            </tr>
+                        </thead>
+                        
+                                    <tbody>
+                                    {data.map((row, index) => (
+                                         <tr
+                                             key={index}
+                                             style={{ backgroundColor: index % 2 === 0 ? 'transparent' :  hexToRgba(barColor2, 0.1) }}
+                                >
+                                    <td style={tdStyle}>{row.client}</td>
+                                    <td style={tdStyle}>{row[dataKey1]}</td>
+                                    {dataKey2 && <td style={tdStyle}>{row[dataKey2]}</td>}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                  </div>
+            </div>
+        );
+    };
 
 
     return (
@@ -159,8 +262,8 @@ const MonthDelivery = () => {
                 </div>
             )}
             <div className="row">
-                <div className="col-md-12">
-                    {renderChart(
+                <div className="col-12">
+                    {renderChartWithTable(
                         chartsData.FPP,
                         `FPP Stage - ${selectedMonth || 'All Months'}`,
                         'title_count',
@@ -171,39 +274,39 @@ const MonthDelivery = () => {
                         'Pages'
                     )}
                 </div>
-                <div className="col-md-12">
-                    {renderChart(
+                <div className="col-12">
+                    {renderChartWithTable(
                         chartsData.Finals,
                         `Finals Stage - ${selectedMonth || 'All Months'}`,
                         'title_count',
                         'Number of Titles',
-                         '',
+                        '',
                         '',
                         'No. of Titles',
                         ''
                     )}
                 </div>
-                <div className="col-md-12">
-                    {renderChart(
+                <div className="col-12">
+                    {renderChartWithTable(
                         chartsData.Revises,
                         `Revises-1 Stage - ${selectedMonth || 'All Months'}`,
                         'title_count',
                         'Number of Titles',
                         'sum_corrections',
-                         'Sum of Corrections',
+                        'Sum of Corrections',
                         'No. of Titles',
-                       'Corrections'
+                        'Corrections'
                     )}
                 </div>
-                <div className="col-md-12">
-                    {renderChart(
+                <div className="col-12">
+                    {renderChartWithTable(
                         chartsData.OtherDeliveries,
                         `Other Deliveries Stage - ${selectedMonth || 'All Months'}`,
-                         'title_count',
-                         'Number of Titles',
+                        'title_count',
+                        'Number of Titles',
                         'sum_corrections',
-                         'Sum of Corrections',
-                         'No. of Titles',
+                        'Sum of Corrections',
+                        'No. of Titles',
                         'Corrections'
                     )}
                 </div>

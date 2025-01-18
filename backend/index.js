@@ -66,7 +66,7 @@ app.get('/sidebar', authenticate, (req, res) => {
   const { role } = req.user;
 
   const sidebar = {
-    admin: ['Home', 'Time Sheet', 'Monthly Report', 'Products', 'Customers'],
+    admin: ['Home', 'Time Sheet', 'Monthly Report', 'Title Statistics', 'Customers'],
     user: ['Home', 'Time Sheet'],
   };
 
@@ -187,7 +187,6 @@ app.get('/client-delivery-data-filters', async (req, res) => {
 });
 
 //Month wise Monthly delivery data
-
 app.get('/month-delivery-data', async (req, res) => {
   const { client, month, stage } = req.query;
 
@@ -252,7 +251,6 @@ app.get('/month-delivery-data', async (req, res) => {
   }
 });
 //Month wise Monthly delivery data
-
 app.get('/month-delivery-data-filters', async (req, res) => {
     try {
       const query = `
@@ -282,7 +280,6 @@ app.get('/month-delivery-data-filters', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error', details: error.message });
     }
   });
-
 
 //Clientwise Ontime Data
   app.get('/client-ontime-data', async (req, res) => {
@@ -518,7 +515,6 @@ app.get('/month-delivery-data-filters', async (req, res) => {
     }
 });
 
-
 //Getting the QMRS data 
 app.get('/QMRS', async (req, res) => {
   try {
@@ -610,3 +606,48 @@ app.get('/QMRS', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch data' });
   }
 });
+
+app.get('/clients', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT DISTINCT client FROM monthlyreport');
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Endpoint to get ititles by client
+app.get('/ititles/:client', async (req, res) => {
+  const client = req.params.client;
+  try {
+    const result = await pool.query('SELECT DISTINCT ititle FROM monthlyreport WHERE client = $1', [client]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Endpoint to get the monthly report based on client and ititle
+app.get('/monthlyreport', async (req, res) => {
+  const { client, ititle } = req.query;
+  try {
+    const result = await pool.query(`
+      SELECT client, division, ititle, stage, pages, corrections, 
+             TO_CHAR(received_date, 'YYYY-MM-DD') AS received_date, 
+             TO_CHAR(actual_date, 'YYYY-MM-DD') AS actual_date, 
+             TO_CHAR(proposed_date, 'YYYY-MM-DD') AS proposed_date, 
+             TO_CHAR(delivered_date, 'YYYY-MM-DD') AS delivered_date,
+             (delivered_date - received_date) AS working_days
+      FROM monthlyreport 
+      WHERE client = $1 AND ititle = $2
+    `, [client, ititle]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+});
+

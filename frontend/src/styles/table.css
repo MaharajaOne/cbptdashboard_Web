@@ -1,0 +1,12 @@
+.even-row {
+    background-color: red;
+  }
+  
+  .odd-row-primary {
+      background-color: red; /* semi-transparent version of #8884d8*/
+  }
+  
+  
+  .odd-row-secondary {
+    background-color: red; /* semi-transparent version of #82ca9d */
+  }

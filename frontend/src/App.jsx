@@ -12,6 +12,7 @@ import ClientOntime from './Pages/ClientOntime';
 import MonthOntime from './Pages/MonthOntime';
 import Productivity from './Pages/Productivity'; 
 import Quality from './Pages/Quality'; // Import Quality component
+import TitleStatistics from './Pages/TitleStatistics';
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -21,7 +22,7 @@ const App = () => {
 
   const fetchSidebar = (role) => {
     const sidebarOptions = {
-      admin: ['Home', 'TimeSheet', 'Monthly Report', 'Products', 'Customers'],
+      admin: ['Home', 'TimeSheet', 'Monthly Report', 'Title Statistics', 'Customers'],
       user: ['Home', 'TimeSheet'],
     };
     setSidebar(sidebarOptions[role] || []);
@@ -86,8 +87,8 @@ const App = () => {
             <Route path="/monthlyreport/monthontime" element={<MonthOntime />} />
             <Route path="/monthlyreport/quality" element={<Quality />} />
             <Route path="/monthlyreport/productivity" element={<Productivity />} />
-            <Route path="/products" element={<h1>Products</h1>} />
-            <Route path="/customers" element={<h1>Customers</h1>} />
+            <Route path="/titlestatistics" element={<TitleStatistics />} />
+            <Route path="/customers" element={<h1>Customersa</h1>} />
             <Route path="/" element={<Navigate to="/home" />} />
           </Routes>
         </div>

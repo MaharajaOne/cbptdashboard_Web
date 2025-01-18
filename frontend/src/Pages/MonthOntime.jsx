@@ -90,16 +90,21 @@ const MonthOntime = () => {
     return sortedData;
   };
 
-  const renderChart = (stageData, title) => {
+  const hexToRgba = (hex, opacity) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${opacity})` : null;
+  };
+
+  const renderChartWithTable = (stageData, title) => {
     if (!stageData || stageData.length === 0) {
       return (
-        <div className="col-md-12 mb-3 border bg-light p-3">
+        <div className="col-12 mb-3 border bg-light p-3">
           No data available for {title}
         </div>
       );
     }
-
     const transformedData = transformChartData(stageData);
+
 
     const maxYValue = Math.max(
       ...transformedData.map(
@@ -114,58 +119,136 @@ const MonthOntime = () => {
 
     const yAxisMax = Math.ceil(maxYValue * 1.2);
 
+    const tableStyle = {
+      width: '100%',
+      borderCollapse: 'collapse',
+      marginTop: '10px',
+    };
+    const thStyle = {
+      border: '1px solid #ddd',
+      padding: '8px',
+      textAlign: 'center',
+    };
+    const tdStyle = {
+      border: '1px solid #ddd',
+      padding: '8px',
+      textAlign: 'center',
+      lineHeight: '1'
+    };
+
+    const barColor1 = "#d65555";
+    const barColor2 = "#54c57a";
+    const barColor3 = "#1274d6";
+
+    const enhancedData = transformedData.map(item => {
+      const totalTitles = Number(item.late_titles) + Number(item.met_revised_titles) + Number(item.met_original_titles);
+      const delayPercentage = totalTitles === 0 ? 0 : ((Number(item.late_titles) / totalTitles) * 100).toFixed(2);
+      return {
+        ...item,
+        total_titles: totalTitles,
+        delay_percentage: delayPercentage,
+      };
+    });
+
     return (
-      <div className="col-md-12 mb-3 border p-3 bg-light">
-        <h5 className="text-center">{title}</h5>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            data={transformedData}
-            margin={{ top: 50, right: 30, left: 20, bottom: 40 }}
-          >
-            <XAxis
-              dataKey="client"
-              label={{
-                value: "Clients",
-                position: "insideBottom",
-                offset: -40,
-              }}
-            />
-            <YAxis
-              label={{
-                value: "No of Titles",
-                angle: -90,
-                position: "insideLeft",
-              }}
-              domain={[0, yAxisMax]}
-            />
-            <Tooltip />
-            <Legend />
-            <Bar
-              dataKey="late_titles"
-              fill="#d65555"
-              name="No of titles Delivered Late"
+      <div className="row mb-4">
+        {/* Chart Section */}
+        <div className="col-7 border p-3 bg-light">
+          <h5 className="text-center">{title}</h5>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart
+              data={enhancedData}
+              margin={{ top: 60, right: 30, left: 20, bottom: 0 }}
             >
-              <LabelList dataKey="late_titles" position="top" />
-            </Bar>
-            <Bar
-              dataKey="met_revised_titles"
-              fill="#54c57a"
-              name="No of titles Met revised date"
-            >
-              <LabelList dataKey="met_revised_titles" position="top" />
-            </Bar>
-            <Bar
-              dataKey="met_original_titles"
-              fill="#1274d6"
-              name="No of titles Met original Date"
-            >
-              <LabelList dataKey="met_original_titles" position="top" />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              <Legend
+                width="auto"
+                wrapperStyle={{
+                  top: -5,
+                  right: 10,
+                  backgroundColor: '#f5f5f5',
+                  border: '1px solid #d5d5d5',
+                  borderRadius: 3,
+                  lineHeight: '40px',
+                }}
+              />
+              <XAxis
+                dataKey="client"
+                label={{
+                  value: "Clients",
+                  position: "insideBottom",
+                  offset: -40,
+                }}
+              />
+              <YAxis
+                label={{
+                  value: "No of Titles",
+                  angle: -90,
+                  position: "insideLeft",
+                }}
+                domain={[0, yAxisMax]}
+              />
+              <Tooltip />
+              <Legend />
+              <Bar
+                dataKey="late_titles"
+                fill={barColor1}
+                name="No of titles Delivered Late"
+              >
+                <LabelList dataKey="late_titles" position="top" />
+              </Bar>
+              <Bar
+                dataKey="met_revised_titles"
+                fill={barColor2}
+                name="No of titles Met revised date"
+              >
+                <LabelList dataKey="met_revised_titles" position="top" />
+              </Bar>
+              <Bar
+                dataKey="met_original_titles"
+                fill={barColor3}
+                name="No of titles Met original Date"
+              >
+                <LabelList dataKey="met_original_titles" position="top" />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Table Section */}
+        <div className="col-5 border p-3 bg-light">
+          <h6 className="text-center">Data Table</h6>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Client</th>
+                <th style={thStyle}>Late Titles</th>
+                <th style={thStyle}>Met Revised</th>
+                <th style={thStyle}>Met Original</th>
+                <th style={thStyle}>Total Titles</th>
+                <th style={thStyle}>Delay Percentage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {enhancedData.map((row, index) => (
+                <tr
+                  key={index}
+                  style={{ backgroundColor: index % 2 === 0 ? 'transparent' : hexToRgba(barColor2, 0.1) }}
+                >
+                  <td style={tdStyle}>{row.client}</td>
+                  <td style={tdStyle}>{row.late_titles}</td>
+                  <td style={tdStyle}>{row.met_revised_titles}</td>
+                  <td style={tdStyle}>{row.met_original_titles}</td>
+                  <td style={tdStyle}>{row.total_titles}</td>
+                  <td style={tdStyle}>{row.delay_percentage} %</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
+
 
   return (
     <div className="container mt-1">
@@ -177,9 +260,8 @@ const MonthOntime = () => {
               <button
                 key={month}
                 style={{ fontSize: ".60rem" }}
-                className={`btn btn-outline-primary m-1 ${
-                  selectedMonth === month ? "active" : ""
-                }`}
+                className={`btn btn-outline-primary m-1 ${selectedMonth === month ? "active" : ""
+                  }`}
                 onClick={() => handleMonthClick(month)}
               >
                 {month}
@@ -197,25 +279,25 @@ const MonthOntime = () => {
       )}
       <div className="row">
         <div className="col-md-12">
-          {renderChart(
+          {renderChartWithTable(
             chartData.filter((item) => item.normalized_stage === "01_FPP"),
             `FPP Stage - ${selectedMonth || "All Months"}`
           )}
         </div>
         <div className="col-md-12">
-          {renderChart(
+          {renderChartWithTable(
             chartData.filter((item) => item.normalized_stage === "03_Finals"),
             `Finals Stage - ${selectedMonth || "All Months"}`
           )}
         </div>
         <div className="col-md-12">
-          {renderChart(
+          {renderChartWithTable(
             chartData.filter((item) => item.normalized_stage === "02_Revises-1"),
             `Revises-1 Stage - ${selectedMonth || "All Months"}`
           )}
         </div>
         <div className="col-md-12">
-          {renderChart(
+          {renderChartWithTable(
             chartData.filter(
               (item) => item.normalized_stage === "04_Other Deliveries"
             ),
